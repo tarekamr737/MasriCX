@@ -48,8 +48,8 @@ training:
 
 dataset:
   id: Seif-Eldeen-Sameh/asr_codeswitched_dataset
-  revision: TBD    # pinned by orchestrator after data audit (Phase 1)
-  license: TBD     # recorded by orchestrator after data audit
+  revision: 712de01079517771f95bcdecee68ca232b979628  # pinned (verified 2026-09-20)
+  license: "Mixed: aggregate card says MIT, but ~12,480 clips derive from a GPL-tagged source; not uniformly MIT. No redistribution; final model publication blocked pending source review."
   splits:
     train: 90
     validation: 5

@@ -1,0 +1,106 @@
+# MasriCX data-source registry.
+#
+# Authoritative, machine-readable record of the datasets used in Phase 1+.
+# All facts below were verified by the orchestrator against the live Hugging
+# Face dataset cards on 2026-09-20 ("retrieved" date). No invented facts:
+# anything not verified is absent or explicitly marked.
+#
+# Governance summary:
+#  * asr_codeswitched_dataset: aggregate card says MIT, but ~12,480 clips come
+#    from MohamedRashad/arabic-english-code-switching (revision/source tagged
+#    GPL; built partly from YouTube and a now-unavailable predecessor). The
+#    aggregate is NOT uniformly MIT. Audit + provisional internal
+#    research/training allowed; no redistribution of raw/transformed data;
+#    final model publication/license claims blocked pending source review.
+#  * EGYSpeak: card says CC-BY-4.0 but upstream Kaggle
+#    fadisarwat/egyptian-arabic-lines v5 is GPL-3.0. Pseudo-labelled only;
+#    E3 disabled until the conflict is resolved; never treat as gold; no full
+#    audio download in Phase 1.
+#  * Casablanca Egypt: CC-BY-NC-ND-4.0, evaluation only; never train/augment/
+#    tune on it; no redistribution of audio or derivatives; publish aggregate
+#    metrics and brief non-sensitive examples with attribution only.
+
+retrieved: "2026-09-20"
+
+datasets:
+  - id: Seif-Eldeen-Sameh/asr_codeswitched_dataset
+    role: primary_training
+    revision: 712de01079517771f95bcdecee68ca232b979628
+    config: default
+    splits:
+      train: train_default_split
+    row_count: 45189
+    row_count_note: "~45.2K rows (approx)"
+    schema:
+      audio: "Audio(16kHz)"
+      transcript: string
+    size_note: "parquet ~3.9 GB"
+    card_metadata:
+      claimed_duration: "34.1h"
+      claimed_avg_duration: "2.7s"
+      domain: "Egyptian Arabic-English lecture/talk"
+      aggregate_license_declared: "MIT"
+    license:
+      declared: "MIT (aggregate card metadata)"
+      caveat: "~12,480 clips derive from MohamedRashad/arabic-english-code-switching (source/revision tagged GPL; built partly from YouTube and a now-unavailable predecessor). The aggregate is NOT uniformly MIT."
+      effective: "mixed; per-clip provenance unresolved"
+    pseudo_labelled: false
+    allowed_use:
+      - audit
+      - provisional_internal_research_training
+    redistribution_policy: "none: do not redistribute raw or transformed data"
+    release_blocker:
+      blocked: true
+      reason: "final model publication/license claims blocked pending source-chain review"
+
+  - id: MohamedGomaa30/EGYSpeak
+    role: optional_pseudo_labelled_supplement
+    revision: 59c40fc6833382a743c180f50addcda5edaa47c3
+    config: null
+    splits:
+      train: train
+    row_count: 147979
+    schema:
+      file_name: string
+      transcription: string
+    size_note: "~22.4 GB audio in 23 tar shards; 16kHz mono PCM"
+    card_metadata:
+      transcript_generator: "EgypTalk-ASR-v2 (machine-generated, filtered)"
+    license:
+      declared: "CC-BY-4.0 (card)"
+      caveat: "upstream Kaggle fadisarwat/egyptian-arabic-lines v5 is GPL-3.0; unresolved license-source conflict"
+      effective: "conflicted/unresolved"
+    pseudo_labelled: true
+    allowed_use:
+      - metadata_inspection
+      - pseudo_label_audit_only
+    redistribution_policy: "none"
+    release_blocker:
+      blocked: true
+      reason: "E3 disabled/not runnable until the CC-BY-4.0 vs GPL-3.0 license-chain conflict is resolved; audio/full use fail-closed in the loader"
+
+  - id: UBC-NLP/Casablanca
+    role: external_evaluation_only
+    revision: 8951b1b88e28c1107142ced57967b8d16350951d
+    config: Egypt
+    splits:
+      validation: 846
+      test: 846
+    schema:
+      audio: "Audio"
+      seg_id: string
+      transcription: string
+      gender: string
+      duration: "float"
+    license:
+      declared: "CC-BY-NC-ND-4.0"
+      caveat: null
+      effective: "declaring; source-verified"
+    pseudo_labelled: false
+    allowed_use:
+      - evaluation_only
+      - validation_pipeline_smoke_no_model_selection
+    redistribution_policy: "none: publish only aggregate metrics and brief non-sensitive examples with attribution; do not redistribute audio or modified derivatives"
+    release_blocker:
+      blocked: true
+      reason: "data redistribution blocked by CC-BY-NC-ND-4.0; aggregate metrics publication allowed with attribution"

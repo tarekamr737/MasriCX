@@ -74,6 +74,33 @@ python -m masricx.config validate \
   configs/pilot.yaml configs/codeswitch.yaml configs/telephone.yaml configs/egyspeak_ablation.yaml
 ```
 
+## Data audit (Phase 1)
+
+Metadata-only smoke audit (registry check, no dataset download, no audio):
+
+```bash
+python -m masricx.data.audit --help                 # CLI usage
+python -m masricx.config validate configs/pilot.yaml configs/codeswitch.yaml configs/telephone.yaml configs/egyspeak_ablation.yaml
+```
+
+Full audit (downloads the pinned dataset and decodes audio by default;
+requires `datasets` + `soundfile`/`numpy` locally, never installed during CI;
+measured output remains NOT RUN until the orchestrator executes it):
+
+```bash
+python -m masricx.data.audit --config configs/codeswitch.yaml
+python -m masricx.data.audit --config configs/codeswitch.yaml --max-examples 500 --streaming
+python -m masricx.data.audit --config configs/codeswitch.yaml --no-audio --max-examples 1000
+```
+
+Flags: `--max-examples N` (cap examples), `--streaming` (stream rows),
+`--no-audio` (skip audio decoding; audio metrics are reported as *unavailable*,
+not zero), `--output-json` / `--output-md` (report paths). Outputs:
+`artifacts/data_audit.json` (git-ignored) and `reports/DATA_AUDIT.md`.
+
+The full audit requires `datasets` and `soundfile`/`numpy` in the local
+environment; they are never downloaded during CI.
+
 ## Reproduction (documented commands; results not yet produced)
 
 ```bash
@@ -90,8 +117,13 @@ ships the scaffold, thin script wrappers, and config validation only.
 
 - Repository code: Apache-2.0 (see `LICENSE`). This grants no rights to datasets
   or model weights; each dataset/model keeps its own license.
-- Dataset revisions, licenses, and redistribution terms: `TBD` until the
-  orchestrator's data audit (see `reports/DATA_AUDIT.md`).
+- Dataset revisions, licenses, and redistribution terms: recorded in
+  `configs/data_sources.yaml` (verified 2026-09-20) and summarized in
+  `reports/DATA_AUDIT.md`. The primary dataset's aggregate is NOT uniformly MIT
+  (a ~12,480-clip subset derives from a GPL-tagged source); final model
+  publication remains blocked pending source-chain review.
 - EGYSpeak, if used, is pseudo-labelled machine-generated data and is never
-  treated as gold ground truth.
-- The external Casablanca Egypt test set is evaluation-only.
+  treated as gold ground truth; E3 is disabled until the license-chain conflict
+  (card CC-BY-4.0 vs upstream Kaggle GPL-3.0) is resolved; the loader fails
+  closed on audio/full use.
+- The external Casablanca Egypt test set is evaluation-only (CC-BY-NC-ND-4.0).
