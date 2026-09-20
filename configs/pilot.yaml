@@ -1,0 +1,87 @@
+# MasriCX P1/P2/P3 LoRA pilot — small hyperparameter study on a ~5-hour subset.
+# Values below are the orchestrator-fixed candidates; results are TBD.
+
+experiment:
+  name: pilot-lora
+  experiment: E1
+  description: >-
+    Pilot LoRA rank/learning-rate search on a ~5-hour subset of the primary
+    code-switched dataset. Candidates: (r=8, lr=1e-4), (r=16, lr=1e-4),
+    (r=16, lr=5e-5). Selected column format used in reports: run / lora_rank /
+    learning_rate (P1, P2, P3).
+
+model:
+  id: openai/whisper-large-v3-turbo
+  load_in_8bit: true
+  dtype: float16
+
+lora:
+  r: 16            # overridden per run: P1 uses r=8; P2/P3 use r=16
+  alpha: 32
+  dropout: 0.05
+  target_modules:
+    - q_proj
+    - v_proj
+
+training:
+  learning_rate: 1.0e-4   # overridden per run: P3 uses 5e-5
+  epochs: 2
+  warmup_ratio: 0.05
+  weight_decay: 0.01
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 8
+  gradient_checkpointing: true
+  fp16: true
+  eval_strategy: steps
+  eval_steps: 250
+  save_strategy: steps
+  save_steps: 250
+  save_total_limit: 3
+  seed: 42
+
+dataset:
+  id: Seif-Eldeen-Sameh/asr_codeswitched_dataset
+  revision: TBD    # pinned by orchestrator after data audit (Phase 1)
+  license: TBD     # recorded by orchestrator after data audit
+  splits:
+    train: 90
+    validation: 5
+    test: 5
+    seed: 42
+
+# Pilot subset definition (approximately 5 hours of audio split with seed 42).
+pilot_subset:
+  target_hours: 5
+
+# Structured P1/P2/P3 candidates (spec section 20). The ordinary lora/training
+# fields above are the executable default (P2 values).
+pilot_candidates:
+  - run: P1
+    lora_rank: 8
+    learning_rate: 1.0e-4
+  - run: P2
+    lora_rank: 16
+    learning_rate: 1.0e-4
+  - run: P3
+    lora_rank: 16
+    learning_rate: 5.0e-5
+
+augmentation:
+  enabled: false        # pilot runs clean; telephony augmentation is E2
+  seed: 42
+  telephone_bandpass_probability: 0.0
+  narrowband_resample_probability: 0.0
+  mulaw_alaw_probability: 0.0
+  gain_variation_probability: 0.0
+  clipping_probability: 0.0
+  noise_probability: 0.0
+  speed_perturbation_probability: 0.0
+  speed_rate_range: [0.95, 1.05]
+  apply_probability: 0.0
+  preserve_transcript: true
+
+telephone_test:
+  enabled: false        # evaluated only in E0/E1/E2 gate stages
+  seed: 42
+  bandpass_hz: [300, 3400]
+  reference_resample_khz: 8

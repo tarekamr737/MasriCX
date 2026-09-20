@@ -1,0 +1,83 @@
+# E2 — Telephone robustness: E1 plus telephone augmentation on ~30-40% of
+# training examples.
+#
+# Important distinction preserved by this config:
+#   * `augmentation`     = stochastic training-time degradation (probabilities
+#     below are independently sampled per example/step; no single transform
+#     exceeds its spec cap).
+#   * `telephone_test`   = deterministic fixed degradation applied once to build
+#     `test_telephone` from `test_clean` (same examples, same transcripts; only
+#     the waveform differs). This is evaluation-only and never random.
+
+experiment:
+  name: telephone-e2
+  experiment: E2
+  description: >-
+    E1 plus stochastic telephone augmentation on approximately 30-40% of
+    training examples; deterministic fixed telephone degradation for the
+    telephone robustness test set.
+
+model:
+  id: openai/whisper-large-v3-turbo
+  load_in_8bit: true
+  dtype: float16
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules:
+    - q_proj
+    - v_proj
+
+training:
+  learning_rate: 1.0e-4
+  epochs: 2
+  warmup_ratio: 0.05
+  weight_decay: 0.01
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 8
+  gradient_checkpointing: true
+  fp16: true
+  eval_strategy: steps
+  eval_steps: 250
+  save_strategy: steps
+  save_steps: 250
+  save_total_limit: 3
+  seed: 42
+
+dataset:
+  id: Seif-Eldeen-Sameh/asr_codeswitched_dataset
+  revision: TBD    # pinned by orchestrator after data audit (Phase 1)
+  license: TBD     # recorded by orchestrator after data audit
+  splits:
+    train: 90
+    validation: 5
+    test: 5
+    seed: 42
+
+# Stochastic TRAINING-TIME augmentation. Per-transform probabilities are the
+# spec's suggested values, applied conditionally when an example is selected
+# for augmentation; not all transforms are applied simultaneously.
+# `apply_probability` is the probability an example enters the augmentation
+# pipeline (0.30-0.40 budget).
+augmentation:
+  enabled: true
+  seed: 42
+  telephone_bandpass_probability: 0.30
+  narrowband_resample_probability: 0.30
+  mulaw_alaw_probability: 0.15
+  gain_variation_probability: 0.20
+  clipping_probability: 0.10
+  noise_probability: 0.15
+  speed_perturbation_probability: 0.10
+  speed_rate_range: [0.95, 1.05]
+  apply_probability: 0.35
+  preserve_transcript: true              # labels are never mutated
+
+# DETERMINISTIC TEST-TIME degradation (not stochastic, not used in training).
+telephone_test:
+  enabled: true
+  seed: 42
+  bandpass_hz: [300, 3400]
+  reference_resample_khz: 8

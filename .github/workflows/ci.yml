@@ -1,0 +1,67 @@
+name: ci
+
+# CPU-only, deterministic, and network-independent after dependency install.
+# CI never trains models or downloads model/dataset artifacts.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PIP_CACHE_DIR: ".runtime/pip"
+  PYTHONPYCACHEPREFIX: ".runtime/pycache"
+  MYPY_CACHE_DIR: ".runtime/mypy"
+  RUFF_CACHE_DIR: ".runtime/ruff"
+  PRE_COMMIT_HOME: ".runtime/pre-commit"
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-paths: |
+            requirements.txt
+            pyproject.toml
+
+      - name: Install dependencies (quality tools + package; no ML stack)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Compile check
+        run: python -m compileall -q src tests
+
+      - name: Ruff lint
+        run: python -m ruff check .
+
+      - name: Ruff format check
+        run: python -m ruff format --check .
+
+      - name: mypy type check
+        run: python -m mypy src
+
+      - name: Pytest
+        run: python -m pytest -q
+
+      - name: Config validation (offline)
+        run: |
+          python -m masricx.config validate \
+            configs/pilot.yaml configs/codeswitch.yaml configs/telephone.yaml configs/egyspeak_ablation.yaml
+
+      # Tiny smoke test: CLI import paths, without any network or model download.
+      - name: CLI smoke test
+        run: python -m masricx.config validate --help

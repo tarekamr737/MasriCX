@@ -1,0 +1,23 @@
+# Local tool runtime and credentials (kept on D: because C: is full)
+.runtime/
+
+# --- Phase 0 additions ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.coverage
+coverage.xml
+htmlcov/
+
+# Generated run artifacts are ignored; keep the tracked figures directory stub.
+artifacts/**
+!artifacts/
+!artifacts/figures/
+!artifacts/figures/.gitkeep
