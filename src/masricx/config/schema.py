@@ -14,6 +14,7 @@ AllowedExperiment = Literal["E0", "E1", "E2", "E3"]
 
 # Phase 0 fixed scientific decisions (orchestrator-owned).
 REQUIRED_MODEL_ID = "openai/whisper-large-v3-turbo"
+REQUIRED_MODEL_REVISION = "41f01f3fe87f28c78e2fbf8b568835947dd65ed9"
 REQUIRED_LORA_TARGET_MODULES: frozenset[str] = frozenset({"q_proj", "v_proj"})
 REQUIRED_SPEED_RATE_RANGE: tuple[float, float] = (0.95, 1.05)
 REQUIRED_EGYSPEAK_CONDITIONS: tuple[int, ...] = (0, 10, 25)
@@ -48,6 +49,7 @@ class ModelConfig(_StrictModel):
     float16 dtype on exactly ``openai/whisper-large-v3-turbo``."""
 
     id: str
+    revision: str = REQUIRED_MODEL_REVISION
     load_in_8bit: bool
     dtype: Literal["float16"]
 
@@ -56,6 +58,15 @@ class ModelConfig(_StrictModel):
     def _exact_model_id(cls, v: str) -> str:
         if v != REQUIRED_MODEL_ID:
             raise ValueError(f"model.id must be exactly {REQUIRED_MODEL_ID!r}, got {v!r}")
+        return v
+
+    @field_validator("revision")
+    @classmethod
+    def _pinned_model_revision(cls, v: str) -> str:
+        if v != REQUIRED_MODEL_REVISION:
+            raise ValueError(
+                f"model.revision must be pinned to {REQUIRED_MODEL_REVISION!r}, got {v!r}"
+            )
         return v
 
     @field_validator("load_in_8bit")
@@ -217,9 +228,7 @@ class TelephoneTestConfig(_StrictModel):
 
 
 class DatasetConfig(_StrictModel):
-    """Primary training dataset. Actual revision/license are TBD in the YAML
-    (they are filled by the orchestrator after the data audit) and are not
-    validated here."""
+    """Primary dataset with pinned revision and documented license state."""
 
     id: str
     revision: str | None = None

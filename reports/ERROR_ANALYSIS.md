@@ -1,13 +1,12 @@
 # Error Analysis
 
-> **Status: template (Phase 0).** No model has been trained or evaluated. All
-> content is `TBD` until Phases 4-10 produce real results.
+> **Status:** deterministic privacy-safe candidate generation is implemented,
+> but no GPU prediction artifact exists. Counts and findings remain `TBD`.
 
-Method: manual inspection of approximately 100-200 representative failures,
-drawn systematically (not cherry-picked) from saved evaluation artifacts.
-No personally identifiable or sensitive audio is exposed here.
+Manual review will sample systematically from saved evaluation artifacts. Raw
+audio and transcript text are not serialized into the candidate artifact.
 
-## Taxonomy (categories to fill)
+## Taxonomy
 
 | Category | Count | Notes |
 |---|---:|---|
@@ -24,6 +23,11 @@ No personally identifiable or sensitive audio is exposed here.
 | Clipping failure | TBD | |
 | Telephone-bandwidth failure | TBD | |
 
-## Representative examples
+## Reproduction
 
-TBD.
+```bash
+python -m masricx.evaluation.error_analysis --predictions .runtime/predictions/e2-clean.jsonl --output-json artifacts/error_candidates.json
+```
+
+The generated IDs, categories, and error rates guide manual review; they are not
+final findings. Representative reviewed examples remain TBD.

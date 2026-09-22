@@ -1,1 +1,1 @@
-"""Local transcription CLI (implemented in later phases)."""
+"""Local single-file transcription interface."""

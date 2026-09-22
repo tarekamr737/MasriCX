@@ -1,0 +1,21 @@
+models:
+  - id: openai/whisper-large-v3-turbo
+    revision: 41f01f3fe87f28c78e2fbf8b568835947dd65ed9
+    framework: transformers
+    license: MIT
+  - id: Seif-Eldeen-Sameh/whisper-medium-arabic-codeswitched
+    revision: 8693f1d8e60a77cd34869055defbe6d08f50e1d7
+    framework: transformers
+    license: Apache-2.0
+  - id: NAMAA-Space/EgypTalk-ASR-v2
+    revision: d23895cf2512efc62b5a34eafa8672b26c530953
+    framework: nemo
+    filename: asr-egyptian-nemo-v2.0.nemo
+    license: CC-BY-4.0
+
+evaluation:
+  manifest: data/splits/test.jsonl
+  clean: true
+  telephone: true
+  aggregation: micro
+  normalization_modes: [raw, normalized]

@@ -1,1 +1,1 @@
-"""Audio preprocessing and telephone augmentation (implemented in later phases)."""
+"""Audio preprocessing and deterministic telephone augmentation."""

@@ -1,38 +1,65 @@
-# Model Card (draft template)
+# MasriCX-ASR Model Card (pre-release draft)
 
-> **Status: template (Phase 0).** This card is drafted for the future
-> `tarekamr737/MasriCX-ASR` HF release. All performance values are `TBD`; none
-> will be published before evaluation is complete and reviewed by the
-> orchestrator.
+> **Status:** code-complete draft for the planned
+> `tarekamr737/MasriCX-ASR` release. No trained adapter or performance result
+> has been approved. Publication is blocked until evaluation and licensing review
+> are complete.
 
-- **Model name:** MasriCX-ASR (TBD final name)
-- **Model description:** TBD
-- **Intended use:** Egyptian Arabic-English code-switched ASR transcription.
-- **Out-of-scope uses:** high-stakes legal/medical transcription; other Arabic
-  dialects (performance not guaranteed); production deployment claims.
-- **Base model:** openai/whisper-large-v3-turbo (809M parameters)
-- **Training datasets:** Seif-Eldeen-Sameh/asr_codeswitched_dataset (revision
-  TBD, license TBD); EGYSpeak only if E3 promotes it — **pseudo-labelled,
-  machine-generated, not gold**.
-- **Training methodology:** 8-bit base + LoRA + gradient checkpointing + FP16.
-- **LoRA configuration:** r=16, alpha=32, dropout=0.05, targets q_proj/v_proj
-  (starting candidate; final pilot-frozen selection: TBD).
-- **Augmentation methodology:** simulated telephone degradation on ~30-40% of
-  training examples (signal-only; transcripts preserved exactly).
-- **Compute environment:** Kaggle free GPU (T4-class); $0 budget.
-- **Evaluation datasets:** internal test, telephone test, Casablanca Egypt
-  (external, evaluation-only).
-- **Evaluation metrics:** TBD.
-- **Benchmark table:** TBD (see reports/BENCHMARK.md).
-- **External evaluation:** TBD.
-- **Error analysis:** TBD (reports/ERROR_ANALYSIS.md).
-- **Limitations:** Egyptian-dominant; training audio is not real private
-  call-center data; telephone conditions are simulated; hallucinations remain
-  possible; not suitable for unreviewed high-stakes use.
-- **Ethical considerations:** dataset licenses and redistribution TBD; no PII
-  shared in reports.
-- **Reproduction instructions:** TBD (commands documented in README).
-- **Citation:** TBD.
-- **GitHub link:** TBD.
-- **License:** repository code Apache-2.0; model weights released under a
-  license TBD at publish time.
+## Model details
+
+- **Task:** Egyptian Arabic-English code-switched automatic speech recognition.
+- **Architecture:** `openai/whisper-large-v3-turbo` with LoRA/PEFT adapters.
+- **Base revision:** recorded in the validated experiment config.
+- **Final adapter revision:** TBD.
+- **License:** repository code is Apache-2.0; model-weight license TBD after
+  dataset source-chain review.
+
+## Intended use
+
+Transcription research for Egyptian-dominant Arabic-English mixed speech, with
+special attention to English technical terms and simulated telephone audio.
+
+Out of scope: unreviewed legal, medical, safety-critical, surveillance, speaker
+identification, or guaranteed production transcription; performance on other
+Arabic dialects and real call-center traffic is not established.
+
+## Training
+
+- 8-bit base loading, LoRA on `q_proj`/`v_proj`, gradient checkpointing, FP16.
+- Pilot candidates and final E1/E2 settings are declared in `configs/`.
+- E1 uses clean primary training data; E2 adds seeded signal-only telephone
+  augmentation while preserving transcripts.
+- E3 is optional and disabled pending licensing review. If used, EGYSpeak is
+  pseudo-labelled machine-generated data and is never treated as gold truth.
+- Intended compute path: Kaggle free GPU; training is resumable and checkpoint-safe.
+
+Exact dataset revisions, roles, and licensing caveats are recorded in
+`configs/data_sources.yaml`; exact run provenance is emitted beside checkpoints.
+
+## Evaluation
+
+Required evaluation includes raw/normalized WER and CER, code-switched WER,
+Arabic/English token WER, English-term recall, number accuracy, hallucination
+screening plus manual review, RTF, fixed telephone degradation, and Casablanca
+Egypt external evaluation. All values are TBD; see `reports/BENCHMARK.md`.
+
+## Limitations and ethics
+
+Training data is public research speech rather than private contact-center audio.
+Telephone conditions are simulated. Fixed splits are not claimed to be
+speaker-disjoint. ASR can hallucinate, omit English terms, and mishandle names or
+numbers. Reports must remain privacy-safe and must not reproduce raw audio or
+transcripts. Casablanca is evaluation-only.
+
+## Reproduction
+
+Use the validated configs, persisted split manifests, training CLI, resumable
+prediction runners, and benchmark aggregator documented in `README.md`. The
+Kaggle notebook is a thin launcher and expects credentials only through Kaggle
+Secrets.
+
+## Citation and links
+
+- GitHub repository: `https://github.com/tarekamr737/MasriCX`.
+- Hugging Face model: `tarekamr737/MasriCX-ASR` (not yet released).
+- Citation: TBD after release.

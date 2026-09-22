@@ -16,6 +16,13 @@ bitsandbytes>=0.43; sys_platform == "linux"
 # --- evaluation ---
 jiwer>=3.0
 
+# Required third-party baseline framework (EgypTalk-ASR-v2)
+nemo_toolkit[asr]>=2.0,<3.0
+
+# --- evaluation / audio audit (proven decoders used by the data audit) ---
+librosa>=0.11,<1
+soundfile>=0.12,<1
+
 # --- dev/quality tools (also exposed via [project.optional-dependencies].dev) ---
 ruff>=0.8,<1.0
 mypy>=1.10

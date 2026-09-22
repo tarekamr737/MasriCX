@@ -23,6 +23,11 @@ dependencies = [
   "pydantic>=2,<3",
 ]
 
+[project.urls]
+Homepage = "https://github.com/tarekamr737/MasriCX"
+Repository = "https://github.com/tarekamr737/MasriCX"
+Issues = "https://github.com/tarekamr737/MasriCX/issues"
+
 [project.optional-dependencies]
 dev = [
   "ruff>=0.8,<1.0",

@@ -1,79 +1,58 @@
-# Benchmark Report
+# Benchmark Plan and Results
 
-> **Status: template (Phase 0).** No evaluation has been run. Every number is
-> `TBD`. Tables here will be generated from saved evaluation artifacts only;
-> nothing is ever hand-invented.
+> **Status:** evaluation framework implemented and offline-tested; GPU inference has not
+> run. Every performance value remains `TBD` until generated from saved JSONL
+> prediction artifacts.
 
 ## Environment
 
-- OS / GPU: TBD
-- Python: 3.11
-- Stack versions (transformers/peft/torch/datasets/accelerate): TBD
+- Training/inference environment: TBD.
+- Python and package versions: TBD.
+- Default compute budget: $0.
 
-## Dataset revisions
+## Artifact provenance
 
-| Dataset | Revision pinned at eval time |
-|---|---|
-| Seif-Eldeen-Sameh/asr_codeswitched_dataset | TBD |
-| UBC-NLP/Casablanca (Egypt subset, eval-only) | TBD |
-| MohamedGomaa30/EGYSpeak (pseudo-labelled, if used) | TBD |
+Model and dataset IDs, immutable revisions, roles, and licensing caveats are
+machine-readable in `configs/baselines.yaml` and `configs/data_sources.yaml`.
+Fixed split definitions and hashes are stored in `data/splits/metadata.json`.
 
-## Split definitions
+## Evaluation rules
 
-- Train 90% / Validation 5% / Internal Test 5%, seed 42 (fixed, persisted in
-  `data/splits/`; not yet generated).
-- No speaker-disjoint splitting is claimed unless speaker metadata enables it
-  (status: TBD).
+Raw WER/CER preserve the reference text as supplied. Normalized WER/CER apply
+the deterministic rules implemented in `masricx.evaluation.normalize`.
+Code-switched WER is reported on mixed Arabic/Latin references; Arabic-token and
+English-token WER use script-filtered token streams. English term recall and
+number accuracy return `null` when a reference has no eligible items.
+Hallucination rate is automated screening followed by mandatory manual review.
+RTF is processing seconds divided by audio seconds.
 
-## Normalization rules
+The clean and deterministic telephone test use identical sample IDs and
+transcripts. Telephone robustness delta is `telephone WER - clean WER`.
 
-- Raw evaluation: trim + collapse whitespace.
-- Normalized evaluation: diacritics, tatweel, punctuation, whitespace, English
-  case. English tokens, numbers, and dialect spelling are never deleted or
-  transliterated.
+## Results
 
-## Metric definitions
+| Model / experiment | Clean WER ↓ | CS-WER ↓ | Telephone WER ↓ | EN recall ↑ | Casablanca WER ↓ | RTF ↓ |
+|---|---:|---:|---:|---:|---:|---:|
+| Whisper Large V3 Turbo (E0) | TBD | TBD | TBD | TBD | TBD | TBD |
+| EgypTalk-ASR-v2 (E0) | TBD | TBD | TBD | TBD | TBD | TBD |
+| Whisper Medium Arabic Code-Switched (E0) | TBD | TBD | TBD | TBD | TBD | TBD |
+| MasriCX E1 | TBD | TBD | TBD | TBD | TBD | TBD |
+| MasriCX E2 | TBD | TBD | TBD | TBD | TBD | TBD |
+| MasriCX E3 (optional) | TBD | TBD | TBD | TBD | TBD | TBD |
 
-WER, normalized WER, CER, CS-WER, Arabic-token WER, English-token WER, English
-Term Recall, Number Accuracy, Hallucination Rate, RTF. Exact semantics TBD by
-the orchestrator (Phase 3).
+## Required analyses after GPU runs
 
-## Baseline results (E0)
-
-| Model | Clean WER ↓ | CS-WER ↓ | Telephone WER ↓ | EN Recall ↑ | Casablanca WER ↓ |
-|---|---:|---:|---:|---:|---:|
-| Whisper Large V3 Turbo | TBD | TBD | TBD | TBD | TBD |
-| EgypTalk-ASR-v2 | TBD | TBD | TBD | TBD | TBD |
-| Whisper Medium Arabic Code-Switched | TBD | TBD | TBD | TBD | TBD |
-
-## E1 (core fine-tuning)
-
-TBD.
-
-## E2 (telephone augmentation)
-
-TBD.
-
-## E3 (EGYSpeak pseudo-labelled ablation, 0%/10%/25%)
-
-TBD.
-
-## Internal test / telephone test / Casablanca
-
-TBD.
-
-## Telephone degradation delta
-
-`telephone WER - clean WER` on identical examples: TBD.
-
-## Latency / RTF
-
-TBD.
-
-## Significance caveats
-
-TBD.
+- Raw and normalized WER/CER, language-token metrics, term/number preservation.
+- Clean versus fixed telephone degradation on identical test examples.
+- Duration, language-category, clipping, silence, and quality buckets.
+- Paired uncertainty/significance caveats; no superiority claim from one metric.
+- Casablanca Egypt results labeled external and evaluation-only.
+- Privacy-safe manual review of all automated hallucination flags and sampled
+  error-analysis candidates.
 
 ## Known limitations
 
-TBD.
+Training speech is not private call-center audio, telephone conditions are
+simulated, near-duplicate discovery is not exhaustive, and splits are not
+speaker-disjoint. E3 and final model publication remain blocked pending dataset
+license-provenance review.

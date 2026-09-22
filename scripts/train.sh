@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Thin wrapper: training entry point. Delegates to
-# src/masricx.training.train (later phase). Never runs training implicitly;
-# callers must pass an explicit config.
+# Thin wrapper for the implemented training entry point. Training remains a
+# dry run unless the caller explicitly adds --execute.
 set -euo pipefail
 
-CONFIG="${1:?usage: train.sh <config.yaml>}"
+CONFIG="${1:?usage: train.sh <config.yaml> [training options]}"
+shift
 
-python -m masricx.training.train --config "${CONFIG}"
+python -m masricx.training.train --config "${CONFIG}" "$@"

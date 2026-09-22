@@ -75,9 +75,11 @@ def test_runtime_dependencies_declared(repo_root: Path) -> None:
     assert "TBD" not in text.split("[project.urls]", 1)[-1] if "[project.urls]" in text else True
 
 
-def test_no_tbd_project_urls(repo_root: Path) -> None:
+def test_project_urls_are_public_and_resolved(repo_root: Path) -> None:
     text = (repo_root / "pyproject.toml").read_text(encoding="utf-8")
-    assert "[project.urls]" not in text
+    assert "[project.urls]" in text
+    assert "https://github.com/tarekamr737/MasriCX" in text
+    assert "TBD" not in text.split("[project.urls]", 1)[1].split("[", 1)[0]
 
 
 def test_requirements_includes_pydantic(repo_root: Path) -> None:

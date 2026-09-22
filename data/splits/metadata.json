@@ -1,0 +1,62 @@
+{
+  "dataset": {
+    "id": "Seif-Eldeen-Sameh/asr_codeswitched_dataset",
+    "revision": "712de01079517771f95bcdecee68ca232b979628"
+  },
+  "deduplication": {
+    "audio_collision_groups": 0,
+    "duplicate_groups": 684,
+    "input_count": 45189,
+    "removed_count": 2022,
+    "retained_count": 43167,
+    "transcript_collision_groups": 684
+  },
+  "leakage_check": {
+    "exact_keys": 86333,
+    "linked_pairs": 20,
+    "sample_ids": 43167
+  },
+  "policy": {
+    "canonical_rule": "lowest dataset index, then sample_id",
+    "near_duplicate_scope": "audit-reported diagnostic pairs only; not exhaustive",
+    "normalization": "masricx.data.text.audit_normalize",
+    "ratios": {
+      "test": 0.05,
+      "train": 0.9,
+      "validation": 0.05
+    },
+    "seed": 42,
+    "speaker_disjoint": false,
+    "speaker_disjoint_reason": "no reliable speaker/session/source ID is available"
+  },
+  "schema_version": 1,
+  "splits": {
+    "test": {
+      "count": 2158,
+      "language_categories": {
+        "AR_EN_CODE_SWITCHED": 520,
+        "AR_ONLY": 1630,
+        "EN_ONLY": 7,
+        "OTHER": 1
+      }
+    },
+    "train": {
+      "count": 38850,
+      "language_categories": {
+        "AR_EN_CODE_SWITCHED": 9366,
+        "AR_ONLY": 29339,
+        "EN_ONLY": 129,
+        "OTHER": 16
+      }
+    },
+    "validation": {
+      "count": 2159,
+      "language_categories": {
+        "AR_EN_CODE_SWITCHED": 521,
+        "AR_ONLY": 1630,
+        "EN_ONLY": 7,
+        "OTHER": 1
+      }
+    }
+  }
+}

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Thin wrapper: benchmark evaluation. Delegates to
-# src/masricx/evaluation/benchmark (later phase).
+# Aggregate an existing prediction JSONL into benchmark artifacts.
 set -euo pipefail
 
-CONFIG="${1:-configs/codeswitch.yaml}"
+PREDICTIONS="${1:?usage: benchmark.sh <predictions.jsonl> [benchmark options]}"
+shift
 
-python -m masricx.evaluation.benchmark --config "${CONFIG}"
+python -m masricx.evaluation.benchmark --predictions "${PREDICTIONS}" "$@"

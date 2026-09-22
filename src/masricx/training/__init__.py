@@ -1,1 +1,1 @@
-"""LoRA/PEFT fine-tuning pipeline (implemented in later phases)."""
+"""Resumable LoRA/PEFT fine-tuning pipeline."""

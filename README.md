@@ -1,11 +1,14 @@
 # MasriCX
 
+[GitHub repository](https://github.com/tarekamr737/MasriCX)
+
 Egyptian Arabic–English **code-switched ASR**: parameter-efficient fine-tuning of
 `openai/whisper-large-v3-turbo` with LoRA/PEFT, evaluated on clean, code-switched,
 telephone-degraded, and external Egyptian speech.
 
-> **Status: Phase 0 (repository bootstrap).** All benchmark values are `TBD`;
-> no training, evaluation, or data audit has been run yet.
+> **Status: local pipeline implemented and offline-verified.** The canonical audit and
+> fixed splits are complete. GPU baselines, training/evaluation, and publication
+> have not run; every performance value remains `TBD`.
 
 ## Why this is hard
 
@@ -32,7 +35,7 @@ MasriCX targets that gap directly. (See `MasriCX_AGENT_SPEC_DELEGATED.md`.)
 | Whisper Medium Arabic Code-Switched | TBD | TBD | TBD | TBD | TBD |
 | **MasriCX-ASR** | **TBD** | **TBD** | **TBD** | **TBD** | **TBD** |
 
-All numbers are generated from saved evaluation artifacts. None exist yet.
+All numbers must be generated from saved prediction artifacts. No GPU prediction artifact exists yet.
 
 ## Repository layout
 
@@ -83,9 +86,8 @@ python -m masricx.data.audit --help                 # CLI usage
 python -m masricx.config validate configs/pilot.yaml configs/codeswitch.yaml configs/telephone.yaml configs/egyspeak_ablation.yaml
 ```
 
-Full audit (downloads the pinned dataset and decodes audio by default;
-requires `datasets` + `soundfile`/`numpy` locally, never installed during CI;
-measured output remains NOT RUN until the orchestrator executes it):
+Full audit (downloads the pinned dataset and decodes audio by default; requires
+`datasets` + `soundfile`/`numpy` locally, never installed during CI):
 
 ```bash
 python -m masricx.data.audit --config configs/codeswitch.yaml
@@ -101,17 +103,62 @@ not zero), `--output-json` / `--output-md` (report paths). Outputs:
 The full audit requires `datasets` and `soundfile`/`numpy` in the local
 environment; they are never downloaded during CI.
 
-## Reproduction (documented commands; results not yet produced)
+The completed canonical audit covers all 45,189 rows and 34.1128 hours at the
+pinned revision. Its privacy-safe measured report is `reports/DATA_AUDIT.md`;
+the canonical generated JSON remains git-ignored under `artifacts/`.
+
+## Deduplication and fixed splits (Phase 2)
+
+Regenerate the privacy-safe manifests from the pinned primary dataset:
 
 ```bash
-python -m masricx.data.audit --config configs/codeswitch.yaml
-python -m masricx.evaluation.benchmark --config configs/codeswitch.yaml
-python -m masricx.training.train --config configs/telephone.yaml
+python -m masricx.data.split --config configs/codeswitch.yaml --audit-json artifacts/data_audit.json --output-dir data/splits
+```
+
+The manifests contain stable IDs, exact transcript/audio hashes, and language
+categories only—never transcript text or audio. Exact duplicates are removed
+before deterministic seed-42 90/5/5 assignment. The 20 audit-reported
+near-duplicate pairs are co-located, but are not exhaustive. No reliable
+speaker/session/source ID exists, so the splits are explicitly not claimed to
+be speaker-disjoint. Counts and leakage results are in `data/splits/metadata.json`.
+
+## Reproduction
+
+All commands are dry-run or local artifact operations unless `--execute` is shown.
+
+```bash
+# Verify configs, tests, typing, and formatting
+make check
+
+# Rebuild fixed privacy-safe split manifests
+make splits
+
+# Inspect the exact E2 plan without loading a model
+make training-plan
+
+# On an authorized CUDA/Kaggle runtime: run the 5-hour pilot, then E1/E2
+python -m masricx.training.pilot --config configs/pilot.yaml --run P1 --output-dir .runtime/runs/pilot-p1 --split-dir data/splits --execute
+python -m masricx.training.train --config configs/codeswitch.yaml --output-dir .runtime/runs/e1 --split-dir data/splits --execute
+python -m masricx.training.train --config configs/telephone.yaml --output-dir .runtime/runs/e2 --split-dir data/splits --execute
+
+# Generate resumable internal predictions from a pinned baseline
+python -m masricx.evaluation.run_inference --model openai/whisper-large-v3-turbo --revision 41f01f3fe87f28c78e2fbf8b568835947dd65ed9 --output .runtime/predictions/base-clean.jsonl --execute
+
+# Aggregate a saved prediction artifact
+python -m masricx.evaluation.benchmark --predictions .runtime/predictions/base-clean.jsonl --output-json artifacts/base-clean.json --output-md reports/BASE_CLEAN.md
+
+# Local single-file inference after a reviewed model release
 python -m masricx.inference.transcribe --audio sample.wav --model tarekamr737/MasriCX-ASR
 ```
 
-The training/evaluation modules listed above are the planned entry points; Phase 0
-ships the scaffold, thin script wrappers, and config validation only.
+The Kaggle notebook is a thin clone/install/launch shell. Set its public
+`REPO_URL`, add `HF_TOKEN` through Kaggle Secrets if checkpoint upload is
+authorized, select a GPU accelerator, and run `kaggle/setup.ipynb`. It does not
+embed credentials or research logic.
+
+GPU training and benchmark generation are intentionally not performed by CI.
+Publication remains blocked until measured artifacts pass the promotion gate and
+the primary dataset source-chain license review is resolved.
 
 ## License and data
 

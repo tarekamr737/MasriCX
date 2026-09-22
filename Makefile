@@ -11,7 +11,7 @@ export MYPY_CACHE_DIR  ?= .runtime/mypy
 export RUFF_CACHE_DIR  ?= .runtime/ruff
 export PYTHONPYCACHEPREFIX ?= .runtime/pycache
 
-.PHONY: check lint format typecheck test validate clean
+.PHONY: check lint format typecheck test validate splits training-plan clean
 
 check: lint format typecheck test validate
 
@@ -29,6 +29,12 @@ test:
 
 validate:
 	$(PYTHON) -m masricx.config validate $(CONFIGS)
+
+splits:
+	$(PYTHON) -m masricx.data.split --config configs/codeswitch.yaml --audit-json artifacts/data_audit.json --output-dir data/splits
+
+training-plan:
+	$(PYTHON) -m masricx.training.train --config configs/telephone.yaml --output-dir .runtime/runs/e2 --split-dir data/splits
 
 # Remove ONLY explicitly named cache subdirectories. Never delete all of
 # .runtime: it also holds ignored OpenCode credentials and relay artifacts.

@@ -10,7 +10,13 @@ import yaml
 
 from masricx.data.aggregators import AuditAggregator, number_bucket
 from masricx.data.audit import audit_example, build_parser, run_audit
-from masricx.data.report_render import render_markdown, write_json, write_reports
+from masricx.data.report_render import (
+    derived_governance,
+    derived_interpretation,
+    render_markdown,
+    write_json,
+    write_reports,
+)
 
 CODESWITCH_REVISION = "712de01079517771f95bcdecee68ca232b979628"
 
@@ -458,3 +464,212 @@ class TestDerivedDuration:
         rec = audit_example("sid", 0, "a" * 100, 10.0, 16000, samples=samples)
         assert rec.duration_seconds == 10.0
         assert rec.mismatch is False  # 10 cps within bounds
+
+
+class TestMetadataRendering:
+    def _registry_report(self) -> dict[str, object]:
+        return {
+            "registry": {
+                "retrieved": "2026-09-20",
+                "datasets": [
+                    {
+                        "id": "unit/withrows",
+                        "role": "primary_training",
+                        "revision": "a" * 40,
+                        "license": {"declared": "MIT (aggregate card metadata)", "caveat": "mixed"},
+                        "row_count": 45189,
+                        "pseudo_labelled": False,
+                        "release_blocker": {
+                            "blocked": True,
+                            "reason": "final model publication blocked pending source review",
+                        },
+                    },
+                    {
+                        "id": "unit/splits",
+                        "role": "external_evaluation_only",
+                        "revision": "b" * 40,
+                        "license": {"declared": "CC-BY-NC-ND-4.0"},
+                        "splits": {"validation": 846, "test": 846},
+                        "pseudo_labelled": False,
+                        "release_blocker": {
+                            "blocked": True,
+                            "reason": "redistribution blocked by NC-ND",
+                        },
+                    },
+                ],
+            },
+            "measured": {},
+        }
+
+    def test_license_rendered_as_plain_text_not_dict(self) -> None:
+        md = render_markdown(self._registry_report())
+        assert "MIT (aggregate card metadata)" in md
+        assert "{" not in md.splitlines()[7]
+        assert "'declared'" not in md
+
+    def test_release_blocker_readable_yes_reason(self) -> None:
+        md = render_markdown(self._registry_report())
+        assert "YES: final model publication blocked pending source review" in md
+        assert "{'blocked'" not in md
+
+    def test_split_counts_fallback_when_no_row_count(self) -> None:
+        md = render_markdown(self._registry_report())
+        assert "validation: 846; test: 846" in md
+        assert "45189" in md
+
+    def test_rows_have_no_stray_or_trailing_spaces(self) -> None:
+        md = render_markdown(self._registry_report())
+        for line in md.split("\n"):
+            assert line == line.rstrip(), f"trailing whitespace: {line!r}"
+            if line.startswith("|"):
+                assert not line.endswith(" | ") or line.endswith("|")
+
+
+class TestInterpretation:
+    def _measured(self) -> dict[str, object]:
+        return {
+            "examples": 45189,
+            "audio_metrics_available": True,
+            "audio_examples_measured": 45189,
+            "duration": {
+                "total_seconds": 122806.01,
+                "min": 0.021,
+                "p25": 1.56,
+                "median": 2.2,
+                "p75": 2.8,
+                "p95": 7.23,
+                "max": 24.94,
+            },
+            "sample_rates": {"16000": 45189},
+            "empty_transcripts": 1,
+            "silent_clips": 1,
+            "corrupted_audio": 0,
+            "clipped_audio": 66,
+            "mismatch_outliers": 53,
+            "unusually_long_transcripts": 168,
+            "language_categories": {
+                "AR_EN_CODE_SWITCHED": 10451,
+                "AR_ONLY": 34550,
+                "EN_ONLY": 170,
+                "OTHER": 18,
+            },
+            "transcript_duplicates": {
+                "exact_duplicate_groups": 684,
+                "exact_duplicate_extra_instances": 2022,
+                "near_duplicate_pair_count": 20,
+                "pair_comparisons": 191239,
+                "comparison_budget_exhausted": False,
+                "candidate_bound": {
+                    "buckets_skipped_over_cap": 1017,
+                    "pair_cap_reported": 20,
+                },
+            },
+            "audio_duplicates": {"exact_duplicate_groups": 0},
+            "number_frequency": {"integer_digits_1": 283},
+        }
+
+    def test_percentages_computed_not_hardcoded(self) -> None:
+        s = derived_interpretation(self._measured())
+        text = "\n".join(s)
+        assert "23.13%" in text  # 10451/45189
+        assert "76.46%" in text  # 34550/45189
+        assert "0.38%" in text  # 170/45189
+        assert "0.04%" in text  # 18/45189
+        assert "4.47%" in text  # 2022/45189
+
+    def test_hours_derived_from_seconds(self) -> None:
+        s = derived_interpretation(self._measured())
+        text = "\n".join(s)
+        assert "34.1128 h" in text  # 122806.01/3600
+        assert "122806.01 s" in text
+
+    def test_decision_wording_present(self) -> None:
+        text = "\n".join(derived_interpretation(self._measured()))
+        assert "preserve stratified code-switch metadata" in text
+        assert "review/filter candidates, not automatic deletions" in text
+        assert "require deduplication before splitting" in text
+        assert "diagnostic only" in text
+        assert "not total prevalence" in text
+        assert "1017 oversized buckets were skipped" in text
+        assert "budget was not exhausted" in text
+        assert "privacy-safe structural buckets" in text
+        assert "raw numeric tokens were not serialized" in text
+
+    def test_capped_near_duplicate_caveat(self) -> None:
+        text = "\n".join(derived_interpretation(self._measured()))
+        assert "capped at 20" in text
+        assert "Do not infer a dataset-wide near-duplicate rate" in text
+
+    def test_missing_keys_omit_statements(self) -> None:
+        m = self._measured()
+        del m["language_categories"]
+        del m["duration"]
+        del m["transcript_duplicates"]
+        del m["number_frequency"]
+        s = derived_interpretation(m)
+        text = "\n".join(s)
+        assert "Language categories" not in text
+        assert "Audio coverage" not in text
+        assert "Near-duplicate" not in text
+        assert "Number frequencies" not in text
+        assert len(s) >= 1  # quality triage still derived from counts
+
+    def test_min_duration_suspicion_reported(self) -> None:
+        text = "\n".join(derived_interpretation(self._measured()))
+        assert "0.021 s minimum duration is suspicious" in text
+
+
+class TestRenderingInvariants:
+    def test_exactly_one_trailing_newline(self) -> None:
+        md = render_markdown(TestRendering()._report())
+        assert md.endswith("\n")
+        assert not md.endswith("\n\n")
+
+    def test_no_trailing_whitespace_anywhere(self) -> None:
+        for report in (TestRendering()._report(), TestMetadataRendering()._registry_report()):
+            md = render_markdown(report)
+            for line in md.split("\n"):
+                assert line == line.rstrip(), f"trailing whitespace: {line!r}"
+
+    def test_full_report_has_interpretation_section(self) -> None:
+        report = TestRendering()._report()
+        md = render_markdown(report)
+        assert "## Interpretation and decisions" in md
+
+
+class TestFinalInterpretationReview:
+    def test_audio_coverage_uses_measured_and_total(self) -> None:
+        measured = TestInterpretation()._measured()
+        measured["audio_examples_measured"] = 45189
+        text = "\n".join(derived_interpretation(measured))
+        assert "45,189/45,189 audio rows decoded" in text
+
+    def test_audio_coverage_not_inferred_without_measured_count(self) -> None:
+        measured = TestInterpretation()._measured()
+        del measured["audio_examples_measured"]
+        text = "\n".join(derived_interpretation(measured))
+        assert "audio rows decoded" not in text
+
+    def test_singular_and_plural_triage_wording(self) -> None:
+        measured = TestInterpretation()._measured()
+        text = "\n".join(derived_interpretation(measured))
+        assert "1 empty transcript (0.00%)" in text
+        assert "1 silent clip (0.00%)" in text
+        assert "66 clipped clips (0.15%)" in text
+
+    def test_governance_conclusion_from_registry(self) -> None:
+        registry = {
+            "datasets": [
+                {"id": "Seif-Eldeen-Sameh/asr_codeswitched_dataset"},
+                {"id": "MohamedGomaa30/EGYSpeak"},
+                {"id": "UBC-NLP/Casablanca"},
+            ]
+        }
+        text = "\n".join(derived_governance(registry))
+        assert "not redistributed" in text
+        assert "publication/license claims remain blocked" in text
+        assert "EGYSpeak E3 remains disabled" in text
+        assert "Casablanca remains evaluation-only" in text
+
+    def test_governance_omitted_for_incomplete_registry(self) -> None:
+        assert derived_governance({"datasets": [{"id": "UBC-NLP/Casablanca"}]}) == []

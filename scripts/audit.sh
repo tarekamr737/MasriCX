@@ -3,5 +3,6 @@
 set -euo pipefail
 
 CONFIG="${1:-configs/codeswitch.yaml}"
+if [[ $# -gt 0 ]]; then shift; fi
 
-python -m masricx.data.audit --config "${CONFIG}"
+python -m masricx.data.audit --config "${CONFIG}" "$@"

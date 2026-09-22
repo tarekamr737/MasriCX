@@ -1,1 +1,1 @@
-"""Metrics: WER, CER, code-switch analysis, English term recall, numbers, hallucination (later phases)."""
+"""Artifact-driven ASR metrics, benchmarking, and error analysis."""

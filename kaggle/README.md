@@ -5,9 +5,9 @@ cells must never contain training logic.
 
 Provided:
 - `setup.ipynb` — minimal valid shell documenting the clone/install/launch flow
-  (Phase 0; contains no training logic).
+  (thin launcher; contains no research-critical training logic).
 
-Planned workflow (spec §30): clone repo → install deps → authenticate to HF
-securely (Kaggle Secrets) → select YAML config → launch `train.py` → push
-checkpoints → evaluate → export → terminate cleanly. Training must be
-resumable across sessions (spec §31).
+Workflow: set the authorized public GitHub URL, install dependencies, read the
+Hugging Face token from Kaggle Secrets, select a YAML config, and launch the
+resumable training CLI. Checkpoint upload, evaluation, and publication remain
+separate orchestrator-controlled steps.
