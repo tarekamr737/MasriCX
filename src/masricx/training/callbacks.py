@@ -6,7 +6,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-from masricx.evaluation.metrics import word_error_rate
+from masricx.evaluation.metrics import english_term_recall, word_error_rate
 from masricx.training.plan import TrainingPlan
 from masricx.training.provenance import write_provenance
 
@@ -25,9 +25,20 @@ def compute_wer(processor: Any, prediction: Any) -> dict[str, float]:
         word_error_rate(reference, hypothesis, mode="normalized")
         for reference, hypothesis in zip(references, hypotheses, strict=True)
     ]
+    english_counts = [
+        english_term_recall(reference, hypothesis)
+        for reference, hypothesis in zip(references, hypotheses, strict=True)
+    ]
     edits = sum(item.substitutions + item.deletions + item.insertions for item in counts)
     reference_units = sum(item.reference_units for item in counts)
-    return {"wer": edits / reference_units if reference_units else float("nan")}
+    english_matched = sum(item.matched for item in english_counts)
+    english_reference = sum(item.reference for item in english_counts)
+    return {
+        "wer": edits / reference_units if reference_units else float("nan"),
+        "english_term_recall": (
+            english_matched / english_reference if english_reference else float("nan")
+        ),
+    }
 
 
 def build_integrity_callback(

@@ -28,6 +28,8 @@ class TrainingPlan:
     lora: dict[str, object]
     training: dict[str, object]
     augmentation: dict[str, object]
+    pilot_target_hours: float | None
+    pilot_validation_examples: int | None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -50,6 +52,9 @@ def build_training_plan(config_path: Path, output_dir: Path, split_dir: Path) ->
     training = _mapping(config, "training")
     lora = _mapping(config, "lora")
     augmentation = _mapping(config, "augmentation")
+    pilot_subset = config.get("pilot_subset")
+    if pilot_subset is not None and not isinstance(pilot_subset, dict):
+        raise ValueError("pilot_subset must be a mapping")
     seed = training.get("seed")
     if isinstance(seed, bool) or not isinstance(seed, int):
         raise ValueError("training.seed must be an integer")
@@ -76,4 +81,10 @@ def build_training_plan(config_path: Path, output_dir: Path, split_dir: Path) ->
         lora=(lora_config_dict(lora) and dict(lora)),
         training=dict(training),
         augmentation=dict(augmentation),
+        pilot_target_hours=(
+            float(pilot_subset.get("target_hours", 5.0)) if pilot_subset is not None else None
+        ),
+        pilot_validation_examples=(
+            int(pilot_subset.get("validation_examples", 512)) if pilot_subset is not None else None
+        ),
     )

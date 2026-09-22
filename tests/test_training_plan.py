@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from masricx.training.checkpoint import latest_complete_checkpoint, validate_checkpoint
-from masricx.training.executor import _select_manifest
+from masricx.training.executor import _seeded_subset, _select_manifest, configure_generation
 from masricx.training.lora import lora_config_dict
 from masricx.training.plan import build_training_plan
 from masricx.training.train import main
@@ -59,6 +60,9 @@ def test_training_plan_and_cli_dry_run_are_network_free(
     assert plan.model_revision == "41f01f3fe87f28c78e2fbf8b568835947dd65ed9"
     assert plan.dataset_revision == "712de01079517771f95bcdecee68ca232b979628"
     assert plan.load_in_8bit
+    assert plan.pilot_target_hours == 5.0
+    assert plan.pilot_validation_examples == 512
+    assert plan.training["save_steps"] == 100
     assert (
         main(
             [
@@ -103,3 +107,38 @@ def test_manifest_selection_carries_stable_sample_ids() -> None:
         {"value": 2, "_masricx_sample_id": "stable-2"},
         {"value": 0, "_masricx_sample_id": "stable-0"},
     ]
+
+
+def test_generation_controls_use_generation_config() -> None:
+    model = type(
+        "FakeModel",
+        (),
+        {
+            "config": SimpleNamespace(forced_decoder_ids="untouched", suppress_tokens="untouched"),
+            "generation_config": SimpleNamespace(forced_decoder_ids=[1], suppress_tokens=[2]),
+        },
+    )()
+    configure_generation(model)
+    assert model.generation_config.forced_decoder_ids is None
+    assert model.generation_config.suppress_tokens == []
+    assert model.config.forced_decoder_ids == "untouched"
+    assert model.config.suppress_tokens == "untouched"
+
+
+def test_seeded_pilot_validation_subset_is_deterministic() -> None:
+    class FakeDataset:
+        def __init__(self, rows: list[int]) -> None:
+            self.rows = rows
+
+        def __len__(self) -> int:
+            return len(self.rows)
+
+        def select(self, indices: list[int]) -> FakeDataset:
+            return FakeDataset([self.rows[index] for index in indices])
+
+    source = FakeDataset(list(range(20)))
+    first = _seeded_subset(source, 42, 5)
+    second = _seeded_subset(source, 42, 5)
+    assert first.rows == second.rows
+    assert len(first.rows) == 5
+    assert _seeded_subset(source, 42, 30) is source

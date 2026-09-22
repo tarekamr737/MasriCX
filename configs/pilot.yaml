@@ -36,8 +36,9 @@ training:
   eval_strategy: steps
   eval_steps: 250
   save_strategy: steps
-  save_steps: 250
+  save_steps: 100
   save_total_limit: 3
+  logging_steps: 25
   seed: 42
 
 dataset:
@@ -53,6 +54,9 @@ dataset:
 # Pilot subset definition (approximately 5 hours of audio split with seed 42).
 pilot_subset:
   target_hours: 5
+  # Fixed seeded slice used only for cheap P1/P2/P3 comparisons. Final E1/E2
+  # evaluation uses the complete validation and test manifests.
+  validation_examples: 512
 
 # Structured P1/P2/P3 candidates (spec section 20). The ordinary lora/training
 # fields above are the executable default (P2 values).

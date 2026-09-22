@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import json
 import random
+import warnings
 from pathlib import Path
 from typing import Any, cast
 
@@ -14,7 +15,13 @@ from masricx.training.lora import prepare_lora_model
 from masricx.training.plan import TrainingPlan
 from masricx.training.provenance import experiment_metadata, write_provenance
 
-__all__ = ["execute_training"]
+__all__ = ["configure_generation", "execute_training"]
+
+
+def configure_generation(model: Any) -> None:
+    """Apply Whisper decoding controls through the supported generation config."""
+    model.generation_config.forced_decoder_ids = None
+    model.generation_config.suppress_tokens = []
 
 
 def _number(value: object, key: str) -> float:
@@ -55,6 +62,14 @@ def _pilot_subset(dataset: Any, seed: int, target_hours: float = 5.0) -> Any:
     return dataset.select(selected)
 
 
+def _seeded_subset(dataset: Any, seed: int, max_examples: int) -> Any:
+    if len(dataset) <= max_examples:
+        return dataset
+    order = list(range(len(dataset)))
+    random.Random(seed).shuffle(order)
+    return dataset.select(order[:max_examples])
+
+
 def execute_training(plan: TrainingPlan, resume: Path | None) -> None:  # pragma: no cover
     """Execute on CUDA; refuses accidental local CPU training."""
     try:
@@ -75,8 +90,7 @@ def execute_training(plan: TrainingPlan, resume: Path | None) -> None:  # pragma
         quantization_config=quantization,
         device_map="auto",
     )
-    model.config.forced_decoder_ids = None
-    model.config.suppress_tokens = []
+    configure_generation(model)
     model = prepare_lora_model(model, plan.lora)
     source = datasets.load_dataset(
         plan.dataset_id,
@@ -87,7 +101,10 @@ def execute_training(plan: TrainingPlan, resume: Path | None) -> None:  # pragma
     train_set = _select_manifest(source, _manifest(plan.split_dir, "train"))
     validation_set = _select_manifest(source, _manifest(plan.split_dir, "validation"))
     if "pilot" in plan.experiment:
-        train_set = _pilot_subset(train_set, plan.seed)
+        train_set = _pilot_subset(train_set, plan.seed, plan.pilot_target_hours or 5.0)
+        validation_set = _seeded_subset(
+            validation_set, plan.seed, plan.pilot_validation_examples or 512
+        )
     metadata = experiment_metadata(plan, len(train_set))
     write_provenance(Path(plan.output_dir), plan, metadata, [])
 
@@ -156,6 +173,8 @@ def execute_training(plan: TrainingPlan, resume: Path | None) -> None:  # pragma
         save_strategy=str(values["save_strategy"]),
         save_steps=_integer(values["save_steps"], "save_steps"),
         save_total_limit=_integer(values["save_total_limit"], "save_total_limit"),
+        logging_strategy="steps",
+        logging_steps=_integer(values.get("logging_steps", 25), "logging_steps"),
         seed=plan.seed,
         predict_with_generate=True,
         remove_unused_columns=False,
@@ -171,7 +190,13 @@ def execute_training(plan: TrainingPlan, resume: Path | None) -> None:  # pragma
         compute_metrics=lambda prediction: compute_wer(processor, prediction),
         callbacks=[build_integrity_callback(transformers, plan, metadata)],
     )
-    result = trainer.train(resume_from_checkpoint=str(resume) if resume else None)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r"MatMul8bitLt: inputs will be cast from torch\.float32 to float16.*",
+            category=UserWarning,
+        )
+        result = trainer.train(resume_from_checkpoint=str(resume) if resume else None)
     trainer.save_model(plan.output_dir)
     processor.save_pretrained(plan.output_dir)
     write_provenance(Path(plan.output_dir), plan, metadata, result.metrics)

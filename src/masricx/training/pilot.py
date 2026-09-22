@@ -12,6 +12,7 @@ import yaml
 
 from masricx.training.executor import execute_training
 from masricx.training.plan import TrainingPlan, build_training_plan
+from masricx.training.train import _resolve_resume
 
 
 def select_candidate(plan: TrainingPlan, config_path: Path, run: str) -> TrainingPlan:
@@ -40,14 +41,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--run", choices=("P1", "P2", "P3"), required=True)
     parser.add_argument("--output-dir", type=Path, default=Path(".runtime/training/pilot"))
     parser.add_argument("--split-dir", type=Path, default=Path("data/splits"))
+    parser.add_argument("--resume-from", type=Path)
+    parser.add_argument("--auto-resume", action="store_true")
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args(argv)
     plan = select_candidate(
         build_training_plan(args.config, args.output_dir, args.split_dir), args.config, args.run
     )
-    print(json.dumps(plan.as_dict(), indent=2, sort_keys=True))
+    resume = _resolve_resume(Path(plan.output_dir), args.resume_from, args.auto_resume)
+    print(
+        json.dumps(
+            {**plan.as_dict(), "resume_from": str(resume) if resume else None},
+            indent=2,
+            sort_keys=True,
+        )
+    )
     if args.execute:
-        execute_training(plan, None)
+        execute_training(plan, resume)
     return 0
 
 

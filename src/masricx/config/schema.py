@@ -119,6 +119,7 @@ class TrainingConfig(_StrictModel):
     save_strategy: Literal["steps", "epoch", "no"]
     save_steps: int | None = Field(default=None, ge=1)
     save_total_limit: int | None = Field(default=None, ge=1)
+    logging_steps: int = Field(default=25, ge=1)
     seed: Literal[42]
 
     @model_validator(mode="after")
@@ -307,6 +308,7 @@ class PilotSubsetConfig(_StrictModel):
     """Optional pilot-subset sizing (pilot.yaml)."""
 
     target_hours: float = Field(gt=0.0)
+    validation_examples: int = Field(default=512, ge=1)
     seed: Literal[42] = 42
 
 
