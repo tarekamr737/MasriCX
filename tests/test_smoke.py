@@ -75,6 +75,11 @@ def test_runtime_dependencies_declared(repo_root: Path) -> None:
     assert "TBD" not in text.split("[project.urls]", 1)[-1] if "[project.urls]" in text else True
 
 
+def test_python_range_supports_current_kaggle_runtime(repo_root: Path) -> None:
+    text = (repo_root / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'requires-python = ">=3.11,<3.13"' in text
+
+
 def test_project_urls_are_public_and_resolved(repo_root: Path) -> None:
     text = (repo_root / "pyproject.toml").read_text(encoding="utf-8")
     assert "[project.urls]" in text
