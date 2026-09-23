@@ -2,8 +2,8 @@
 
 > **Status:** code-complete draft for the planned
 > `tarekamr737/MasriCX-ASR` release. No trained adapter or performance result
-> has been approved. Publication is blocked until evaluation and licensing review
-> are complete.
+> has been approved. Publication is blocked until evaluation, promotion-gate,
+> and primary-source model-weight licensing review are complete.
 
 ## Model details
 
@@ -11,8 +11,8 @@
 - **Architecture:** `openai/whisper-large-v3-turbo` with LoRA/PEFT adapters.
 - **Base revision:** recorded in the validated experiment config.
 - **Final adapter revision:** TBD.
-- **License:** repository code is Apache-2.0; model-weight license TBD after
-  dataset source-chain review.
+- **License:** repository code is Apache-2.0; model-weight license remains TBD
+  until the evaluated release candidate is selected.
 
 ## Intended use
 
@@ -27,7 +27,10 @@ Arabic dialects and real call-center traffic is not established.
 
 - 8-bit base loading, LoRA on `q_proj`/`v_proj`, gradient checkpointing, FP16.
 - Pilot candidates and final E1/E2 settings are declared in `configs/`.
-- E1 uses clean primary training data; E2 adds seeded signal-only telephone
+- E1 uses the full primary aggregate for internal research. Its verified
+  GPL-tagged tail contains most code-switched training examples, so public
+  weight licensing remains unresolved rather than silently narrowing the task.
+  E2 adds seeded signal-only telephone
   augmentation while preserving transcripts.
 - E3 is optional and disabled pending licensing review. If used, EGYSpeak is
   pseudo-labelled machine-generated data and is never treated as gold truth.

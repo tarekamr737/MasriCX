@@ -667,7 +667,8 @@ class TestFinalInterpretationReview:
         }
         text = "\n".join(derived_governance(registry))
         assert "not redistributed" in text
-        assert "publication/license claims remain blocked" in text
+        assert "model-weight licensing remains blocked" in text
+        assert "full-data-versus-filtered-data decision" in text
         assert "EGYSpeak E3 remains disabled" in text
         assert "Casablanca remains evaluation-only" in text
 

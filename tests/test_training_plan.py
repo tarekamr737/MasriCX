@@ -7,8 +7,12 @@ from types import SimpleNamespace
 import pytest
 
 from masricx.training.checkpoint import latest_complete_checkpoint, validate_checkpoint
-from masricx.training.executor import _seeded_subset, _select_manifest, configure_generation
-from masricx.training.lora import lora_config_dict
+from masricx.training.executor import (
+    _seeded_subset,
+    _select_manifest,
+    configure_generation,
+)
+from masricx.training.lora import enable_whisper_input_grads, lora_config_dict
 from masricx.training.plan import build_training_plan
 from masricx.training.train import main
 
@@ -21,6 +25,22 @@ def test_lora_config_is_exact_and_fail_closed() -> None:
     assert config["target_modules"] == ["q_proj", "v_proj"]
     with pytest.raises(ValueError):
         lora_config_dict({"r": 0, "alpha": 32, "dropout": 0.05, "target_modules": []})
+
+
+def test_whisper_encoder_input_gradient_hook_is_registered() -> None:
+    hooks: list[object] = []
+
+    class Conv:
+        def register_forward_hook(self, hook: object) -> None:
+            hooks.append(hook)
+
+    model = SimpleNamespace(model=SimpleNamespace(encoder=SimpleNamespace(conv1=Conv())))
+    output = SimpleNamespace(requires_grad_=lambda enabled: setattr(output, "enabled", enabled))
+
+    assert enable_whisper_input_grads(model) is model
+    assert len(hooks) == 1
+    hooks[0](None, None, output)  # type: ignore[operator]
+    assert output.enabled is True
 
 
 def _complete_checkpoint(path: Path) -> None:
@@ -61,7 +81,7 @@ def test_training_plan_and_cli_dry_run_are_network_free(
     assert plan.dataset_revision == "712de01079517771f95bcdecee68ca232b979628"
     assert plan.load_in_8bit
     assert plan.pilot_target_hours == 5.0
-    assert plan.pilot_validation_examples == 512
+    assert plan.pilot_validation_examples == 128
     assert plan.training["save_steps"] == 100
     assert (
         main(
@@ -78,6 +98,8 @@ def test_training_plan_and_cli_dry_run_are_network_free(
     )
     payload = json.loads(capsys.readouterr().out)
     assert payload["resume_from"] is None
+    assert payload["checkpoint_repo"] is None
+    assert payload["max_steps"] is None
     assert payload["experiment"] == "pilot-lora"
 
 

@@ -137,9 +137,14 @@ make splits
 make training-plan
 
 # On an authorized CUDA/Kaggle runtime: run the 5-hour pilot, then E1/E2
+python -m masricx.training.pilot --config configs/pilot.yaml --run P1 --output-dir .runtime/runs/smoke-p1 --split-dir data/splits --max-steps 2 --execute
 python -m masricx.training.pilot --config configs/pilot.yaml --run P1 --output-dir .runtime/runs/pilot-p1 --split-dir data/splits --execute
 python -m masricx.training.train --config configs/codeswitch.yaml --output-dir .runtime/runs/e1 --split-dir data/splits --execute
 python -m masricx.training.train --config configs/telephone.yaml --output-dir .runtime/runs/e2 --split-dir data/splits --execute
+
+# On Kaggle, persist complete checkpoints to an already-created private repo.
+# HF_TOKEN must come from Kaggle Secrets; never place it in this command or repo.
+python -m masricx.training.train --config configs/codeswitch.yaml --output-dir /kaggle/working/masricx-training --split-dir data/splits --auto-resume --checkpoint-repo Tarek737/MasriCX-ASR-training --execute
 
 # Generate resumable internal predictions from a pinned baseline
 python -m masricx.evaluation.run_inference --model openai/whisper-large-v3-turbo --revision 41f01f3fe87f28c78e2fbf8b568835947dd65ed9 --output .runtime/predictions/base-clean.jsonl --execute
@@ -153,22 +158,30 @@ python -m masricx.inference.transcribe --audio sample.wav --model tarekamr737/Ma
 
 The Kaggle notebook is a thin clone/install/launch shell. Set its public
 `REPO_URL`, add `HF_TOKEN` through Kaggle Secrets if checkpoint upload is
-authorized, select a GPU accelerator, and run `kaggle/setup.ipynb`. It does not
-embed credentials or research logic.
+authorized, set `CHECKPOINT_REPO` only after the private repository exists, select
+a GPU accelerator, and run `kaggle/setup.ipynb`. Complete checkpoints are
+validated before upload and namespaced by Git commit and experiment. The notebook
+does not embed credentials or research logic.
+
+Always run the fresh two-step numerical smoke command before a full pilot. It
+logs each optimizer step and fails immediately on non-finite gradients or LoRA
+weights; never resume a checkpoint produced by a failed smoke run.
 
 GPU training and benchmark generation are intentionally not performed by CI.
 Publication remains blocked until measured artifacts pass the promotion gate and
-the primary dataset source-chain license review is resolved.
+the primary-source model-weight licensing decision is resolved.
 
 ## License and data
 
 - Repository code: Apache-2.0 (see `LICENSE`). This grants no rights to datasets
   or model weights; each dataset/model keeps its own license.
 - Dataset revisions, licenses, and redistribution terms: recorded in
-  `configs/data_sources.yaml` (verified 2026-09-20) and summarized in
-  `reports/DATA_AUDIT.md`. The primary dataset's aggregate is NOT uniformly MIT
-  (a ~12,480-clip subset derives from a GPL-tagged source); final model
-  publication remains blocked pending source-chain review.
+  `configs/data_sources.yaml` and summarized in `reports/DATA_AUDIT.md`. The
+  primary aggregate is not uniformly MIT. A complete transcript-multiset check
+  verified its GPL-tagged source tail at indices `32716..45188`. Excluding that
+  tail would remove 7,935 of 9,366 code-switched training examples, so internal
+  research retains the full data while public weight licensing remains blocked;
+  raw/transformed data is not redistributed.
 - EGYSpeak, if used, is pseudo-labelled machine-generated data and is never
   treated as gold ground truth; E3 is disabled until the license-chain conflict
   (card CC-BY-4.0 vs upstream Kaggle GPL-3.0) is resolved; the loader fails

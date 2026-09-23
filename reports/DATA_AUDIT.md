@@ -6,7 +6,7 @@ Source retrieval date: 2026-09-20
 
 | Dataset | Role | Revision | Declared license | Rows | Pseudo-labelled | Release blocker |
 |---|---|---|---|---|---|---|
-| Seif-Eldeen-Sameh/asr_codeswitched_dataset | primary_training | 712de01079517771f95bcdecee68ca232b979628 | MIT (aggregate card metadata) | 45189 | no | YES: final model publication/license claims blocked pending source-chain review |
+| Seif-Eldeen-Sameh/asr_codeswitched_dataset | primary_training | 712de01079517771f95bcdecee68ca232b979628 | MIT (aggregate card metadata) | 45189 | no | YES: public weight licensing requires an explicit decision: full-data training includes the verified GPL-tagged tail, while excluding it removes about 84.7% of code-switched training examples |
 | MohamedGomaa30/EGYSpeak | optional_pseudo_labelled_supplement | 59c40fc6833382a743c180f50addcda5edaa47c3 | CC-BY-4.0 (card) | 147979 | yes | YES: E3 disabled/not runnable until the CC-BY-4.0 vs GPL-3.0 license-chain conflict is resolved; audio/full use fail-closed in the loader |
 | UBC-NLP/Casablanca | external_evaluation_only | 8951b1b88e28c1107142ced57967b8d16350951d | CC-BY-NC-ND-4.0 | test: 846; validation: 846 | no | YES: data redistribution blocked by CC-BY-NC-ND-4.0; aggregate metrics publication allowed with attribution |
 
@@ -71,4 +71,5 @@ No audio or PII is included in this report: counts and IDs only; raw numeric tok
 - Exact audio duplicate groups: 0 under the canonical sampling-rate + float32-PCM SHA-256 hash.
 - Near-duplicate output is diagnostic only: 20 reported pairs (capped at 20) is the reporting cap, not total prevalence; 1017 oversized buckets were skipped and the global comparison budget was not exhausted. Do not infer a dataset-wide near-duplicate rate from this diagnostic output.
 - Number frequencies are privacy-safe structural buckets only (integer_digits_1, integer_digits_2_3, integer_digits_4_plus, decimal); raw numeric tokens were not serialized.
-- Governance: primary data may be audited and used for provisional research but not redistributed; final model publication/license claims remain blocked pending source-chain review; EGYSpeak E3 remains disabled pending license-chain resolution; Casablanca remains evaluation-only.
+- Governance: primary raw/transformed data is not redistributed; public model-weight licensing remains blocked pending an explicit full-data-versus-filtered-data decision; EGYSpeak E3 remains disabled pending its separate license-chain resolution; Casablanca remains evaluation-only.
+- Source-boundary evidence (verified 2026-09-23): All 12,473 aggregate-tail transcripts match the pinned 12,480-row upstream dataset as a raw multiset; the tail begins at shard 0036 local row 172. Excluding it would remove 11,199 deduplicated training rows, including 7,935 of 9,366 code-switched training examples.

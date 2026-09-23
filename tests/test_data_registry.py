@@ -51,7 +51,11 @@ class TestRegistry:
         assert "do not redistribute" in policy.lower()
         blocker = datasets[CODESWITCH]["release_blocker"]
         assert blocker["blocked"] is True
-        assert "source-chain review" in blocker["reason"] or "source review" in blocker["reason"]
+        assert "84.7%" in blocker["reason"]
+        boundary = datasets[CODESWITCH]["source_boundary_evidence"]
+        assert boundary["exclusive_upper_bound"] == 32716
+        assert boundary["excluded_rows"] == 12473
+        assert boundary["upstream_revision"] == ("4a3bffc45219c35949470de32b8d4cb328b0ce11")
 
     def test_egyspeak_pseudo_labelled_and_blocked(self, datasets: dict) -> None:
         ds = datasets[EGYSPEAK]

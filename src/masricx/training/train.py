@@ -26,6 +26,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--resume-from", type=Path)
     parser.add_argument("--auto-resume", action="store_true")
     parser.add_argument(
+        "--max-steps",
+        type=int,
+        help="Bound optimizer steps for an authorized numerical smoke run",
+    )
+    parser.add_argument(
+        "--checkpoint-repo",
+        help="Authorized private Hugging Face model repo in OWNER/NAME form",
+    )
+    parser.add_argument(
         "--execute", action="store_true", help="Import GPU stack and start training"
     )
     return parser
@@ -51,12 +60,19 @@ def _execute_not_yet_imported(plan: object, resume: Path | None) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.max_steps is not None and args.max_steps <= 0:
+        raise SystemExit("--max-steps must be positive")
     plan = build_training_plan(args.config, args.output_dir, args.split_dir)
     resume = _resolve_resume(args.output_dir, args.resume_from, args.auto_resume)
-    payload = {**plan.as_dict(), "resume_from": str(resume) if resume else None}
+    payload = {
+        **plan.as_dict(),
+        "resume_from": str(resume) if resume else None,
+        "checkpoint_repo": args.checkpoint_repo,
+        "max_steps": args.max_steps,
+    }
     print(json.dumps(payload, indent=2, sort_keys=True))
     if args.execute:
-        execute_training(plan, resume)
+        execute_training(plan, resume, args.checkpoint_repo, args.auto_resume, args.max_steps)
     return 0
 
 

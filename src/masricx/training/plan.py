@@ -85,6 +85,6 @@ def build_training_plan(config_path: Path, output_dir: Path, split_dir: Path) ->
             float(pilot_subset.get("target_hours", 5.0)) if pilot_subset is not None else None
         ),
         pilot_validation_examples=(
-            int(pilot_subset.get("validation_examples", 512)) if pilot_subset is not None else None
+            int(pilot_subset.get("validation_examples", 128)) if pilot_subset is not None else None
         ),
     )

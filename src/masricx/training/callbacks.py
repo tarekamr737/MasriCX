@@ -11,6 +11,18 @@ from masricx.training.plan import TrainingPlan
 from masricx.training.provenance import write_provenance
 
 
+def _assert_finite_tensors(model: Any, *, gradients: bool) -> None:
+    kind = "gradient" if gradients else "parameter"
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        value = parameter.grad if gradients else parameter
+        if value is None:
+            continue
+        if not value.detach().isfinite().all().item():
+            raise RuntimeError(f"stop condition: non-finite trainable {kind}: {name}")
+
+
 def compute_wer(processor: Any, prediction: Any) -> dict[str, float]:
     predictions = (
         prediction.predictions[0]
@@ -45,6 +57,7 @@ def build_integrity_callback(
     transformers: Any,
     plan: TrainingPlan,
     metadata: dict[str, Any],
+    checkpoint_store: Any | None = None,
 ) -> Any:
     class IntegrityCallback(transformers.TrainerCallback):  # type: ignore[misc]
         def __init__(self) -> None:
@@ -80,6 +93,22 @@ def build_integrity_callback(
             del kwargs
             checkpoint = Path(args.output_dir) / f"checkpoint-{state.global_step}"
             write_provenance(checkpoint, plan, metadata, state.log_history)
+            if checkpoint_store is not None:
+                checkpoint_store.upload_checkpoint(checkpoint)
+            return control
+
+        def on_pre_optimizer_step(self, args: Any, state: Any, control: Any, **kwargs: Any) -> Any:
+            del args, state
+            model = kwargs.get("model")
+            if model is not None:
+                _assert_finite_tensors(model, gradients=True)
+            return control
+
+        def on_step_end(self, args: Any, state: Any, control: Any, **kwargs: Any) -> Any:
+            del args, state
+            model = kwargs.get("model")
+            if model is not None:
+                _assert_finite_tensors(model, gradients=False)
             return control
 
     return IntegrityCallback()

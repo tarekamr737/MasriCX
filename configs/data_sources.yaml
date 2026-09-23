@@ -11,7 +11,7 @@
 #    GPL; built partly from YouTube and a now-unavailable predecessor). The
 #    aggregate is NOT uniformly MIT. Audit + provisional internal
 #    research/training allowed; no redistribution of raw/transformed data;
-#    final model publication/license claims blocked pending source review.
+#    final public weight licensing requires an explicit decision.
 #  * EGYSpeak: card says CC-BY-4.0 but upstream Kaggle
 #    fadisarwat/egyptian-arabic-lines v5 is GPL-3.0. Pseudo-labelled only;
 #    E3 disabled until the conflict is resolved; never treat as gold; no full
@@ -49,9 +49,18 @@ datasets:
       - audit
       - provisional_internal_research_training
     redistribution_policy: "none: do not redistribute raw or transformed data"
+    source_boundary_evidence:
+      exclusive_upper_bound: 32716
+      retained_index_range: "0..32715"
+      excluded_index_range: "32716..45188"
+      excluded_rows: 12473
+      upstream_id: MohamedRashad/arabic-english-code-switching
+      upstream_revision: 4a3bffc45219c35949470de32b8d4cb328b0ce11
+      verified: "2026-09-23"
+      evidence: "All 12,473 aggregate-tail transcripts match the pinned 12,480-row upstream dataset as a raw multiset; the tail begins at shard 0036 local row 172. Excluding it would remove 11,199 deduplicated training rows, including 7,935 of 9,366 code-switched training examples."
     release_blocker:
       blocked: true
-      reason: "final model publication/license claims blocked pending source-chain review"
+      reason: "public weight licensing requires an explicit decision: full-data training includes the verified GPL-tagged tail, while excluding it removes about 84.7% of code-switched training examples"
 
   - id: MohamedGomaa30/EGYSpeak
     role: optional_pseudo_labelled_supplement

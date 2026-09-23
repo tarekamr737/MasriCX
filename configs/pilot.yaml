@@ -44,7 +44,7 @@ training:
 dataset:
   id: Seif-Eldeen-Sameh/asr_codeswitched_dataset
   revision: 712de01079517771f95bcdecee68ca232b979628  # pinned (verified 2026-09-20)
-  license: "Mixed: aggregate card says MIT, but ~12,480 clips derive from a GPL-tagged source; not uniformly MIT. No redistribution; final model publication blocked pending source review."
+  license: "Mixed: the verified tail at indices 32716..45188 derives from a GPL-tagged source. Internal research allowed; public weight licensing requires an explicit decision."
   splits:
     train: 90
     validation: 5
@@ -56,7 +56,7 @@ pilot_subset:
   target_hours: 5
   # Fixed seeded slice used only for cheap P1/P2/P3 comparisons. Final E1/E2
   # evaluation uses the complete validation and test manifests.
-  validation_examples: 512
+  validation_examples: 128
 
 # Structured P1/P2/P3 candidates (spec section 20). The ordinary lora/training
 # fields above are the executable default (P2 values).

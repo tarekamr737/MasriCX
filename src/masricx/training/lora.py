@@ -6,7 +6,18 @@ import importlib
 from collections.abc import Mapping
 from typing import Any
 
-__all__ = ["lora_config_dict", "prepare_lora_model"]
+__all__ = ["enable_whisper_input_grads", "lora_config_dict", "prepare_lora_model"]
+
+
+def enable_whisper_input_grads(model: Any) -> Any:
+    """Keep Whisper encoder activations differentiable under checkpointing."""
+
+    def make_inputs_require_grad(module: Any, inputs: Any, output: Any) -> None:
+        del module, inputs
+        output.requires_grad_(True)
+
+    model.model.encoder.conv1.register_forward_hook(make_inputs_require_grad)
+    return model
 
 
 def _integer(config: Mapping[str, object], key: str) -> int:
@@ -51,4 +62,5 @@ def prepare_lora_model(model: Any, config: Mapping[str, object]) -> Any:
     except ImportError as exc:  # pragma: no cover - depends on GPU environment
         raise RuntimeError("PEFT is required for training; install requirements.txt") from exc
     prepared = peft.prepare_model_for_kbit_training(model)
+    enable_whisper_input_grads(prepared)
     return peft.get_peft_model(prepared, peft.LoraConfig(**lora_config_dict(config)))

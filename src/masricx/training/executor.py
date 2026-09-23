@@ -11,9 +11,10 @@ from typing import Any, cast
 
 from masricx.audio.augmentation import augment_training_audio
 from masricx.training.callbacks import build_integrity_callback, compute_wer
+from masricx.training.hub import HubCheckpointStore
 from masricx.training.lora import prepare_lora_model
 from masricx.training.plan import TrainingPlan
-from masricx.training.provenance import experiment_metadata, write_provenance
+from masricx.training.provenance import experiment_metadata, git_state, write_provenance
 
 __all__ = ["configure_generation", "execute_training"]
 
@@ -70,7 +71,13 @@ def _seeded_subset(dataset: Any, seed: int, max_examples: int) -> Any:
     return dataset.select(order[:max_examples])
 
 
-def execute_training(plan: TrainingPlan, resume: Path | None) -> None:  # pragma: no cover
+def execute_training(
+    plan: TrainingPlan,
+    resume: Path | None,
+    checkpoint_repo: str | None = None,
+    restore_remote: bool = False,
+    max_steps: int | None = None,
+) -> None:  # pragma: no cover
     """Execute on CUDA; refuses accidental local CPU training."""
     try:
         datasets = importlib.import_module("datasets")
@@ -80,6 +87,13 @@ def execute_training(plan: TrainingPlan, resume: Path | None) -> None:  # pragma
         raise SystemExit("GPU dependencies are missing; install requirements.txt") from exc
     if not torch.cuda.is_available():
         raise SystemExit("training requires CUDA; refusing accidental CPU execution")
+    checkpoint_store = (
+        HubCheckpointStore(checkpoint_repo, plan.experiment, git_state()[0])
+        if checkpoint_repo
+        else None
+    )
+    if resume is None and restore_remote and checkpoint_store is not None:
+        resume = checkpoint_store.restore_latest(Path(plan.output_dir))
     processor = transformers.WhisperProcessor.from_pretrained(
         plan.model_id, revision=plan.model_revision
     )
@@ -90,6 +104,9 @@ def execute_training(plan: TrainingPlan, resume: Path | None) -> None:  # pragma
         quantization_config=quantization,
         device_map="auto",
     )
+    placements = set(getattr(model, "hf_device_map", {}).values())
+    if placements.intersection({"cpu", "disk"}):
+        raise RuntimeError("training refuses a model offloaded to CPU or disk")
     configure_generation(model)
     model = prepare_lora_model(model, plan.lora)
     source = datasets.load_dataset(
@@ -103,7 +120,7 @@ def execute_training(plan: TrainingPlan, resume: Path | None) -> None:  # pragma
     if "pilot" in plan.experiment:
         train_set = _pilot_subset(train_set, plan.seed, plan.pilot_target_hours or 5.0)
         validation_set = _seeded_subset(
-            validation_set, plan.seed, plan.pilot_validation_examples or 512
+            validation_set, plan.seed, plan.pilot_validation_examples or 128
         )
     metadata = experiment_metadata(plan, len(train_set))
     write_provenance(Path(plan.output_dir), plan, metadata, [])
@@ -174,11 +191,17 @@ def execute_training(plan: TrainingPlan, resume: Path | None) -> None:  # pragma
         save_steps=_integer(values["save_steps"], "save_steps"),
         save_total_limit=_integer(values["save_total_limit"], "save_total_limit"),
         logging_strategy="steps",
-        logging_steps=_integer(values.get("logging_steps", 25), "logging_steps"),
+        logging_steps=(
+            1
+            if max_steps is not None
+            else _integer(values.get("logging_steps", 25), "logging_steps")
+        ),
         seed=plan.seed,
         predict_with_generate=True,
         remove_unused_columns=False,
         report_to=[],
+        label_names=["labels"],
+        max_steps=max_steps if max_steps is not None else -1,
     )
     trainer = transformers.Seq2SeqTrainer(
         model=model,
@@ -188,7 +211,7 @@ def execute_training(plan: TrainingPlan, resume: Path | None) -> None:  # pragma
         data_collator=Collator(),
         processing_class=processor.feature_extractor,
         compute_metrics=lambda prediction: compute_wer(processor, prediction),
-        callbacks=[build_integrity_callback(transformers, plan, metadata)],
+        callbacks=[build_integrity_callback(transformers, plan, metadata, checkpoint_store)],
     )
     with warnings.catch_warnings():
         warnings.filterwarnings(
@@ -199,4 +222,10 @@ def execute_training(plan: TrainingPlan, resume: Path | None) -> None:  # pragma
         result = trainer.train(resume_from_checkpoint=str(resume) if resume else None)
     trainer.save_model(plan.output_dir)
     processor.save_pretrained(plan.output_dir)
-    write_provenance(Path(plan.output_dir), plan, metadata, result.metrics)
+    final_metrics = {
+        "train": result.metrics,
+        "log_history": trainer.state.log_history,
+    }
+    write_provenance(Path(plan.output_dir), plan, metadata, final_metrics)
+    if checkpoint_store is not None:
+        checkpoint_store.upload_final(Path(plan.output_dir))

@@ -247,12 +247,28 @@ def derived_governance(registry: Mapping[str, object]) -> list[str]:
     }
     if not required.issubset(ids):
         return []
-    return [
-        "- Governance: primary data may be audited and used for provisional research but not "
-        "redistributed; final model publication/license claims remain blocked pending "
-        "source-chain review; EGYSpeak E3 remains disabled pending license-chain resolution; "
-        "Casablanca remains evaluation-only."
+    lines = [
+        "- Governance: primary raw/transformed data is not redistributed; public model-weight "
+        "licensing remains blocked pending an explicit full-data-versus-filtered-data decision; "
+        "EGYSpeak E3 remains disabled pending its separate license-chain resolution; Casablanca "
+        "remains evaluation-only."
     ]
+    primary = next(
+        (
+            dataset
+            for dataset in datasets
+            if isinstance(dataset, Mapping)
+            and dataset.get("id") == "Seif-Eldeen-Sameh/asr_codeswitched_dataset"
+        ),
+        None,
+    )
+    boundary = primary.get("source_boundary_evidence") if isinstance(primary, Mapping) else None
+    if isinstance(boundary, Mapping) and isinstance(boundary.get("evidence"), str):
+        lines.append(
+            f"- Source-boundary evidence (verified {boundary.get('verified', 'TBD')}): "
+            f"{boundary['evidence']}"
+        )
+    return lines
 
 
 def render_markdown(report: Mapping[str, object]) -> str:

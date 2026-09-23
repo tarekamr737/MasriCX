@@ -308,7 +308,7 @@ class PilotSubsetConfig(_StrictModel):
     """Optional pilot-subset sizing (pilot.yaml)."""
 
     target_hours: float = Field(gt=0.0)
-    validation_examples: int = Field(default=512, ge=1)
+    validation_examples: int = Field(default=128, ge=1)
     seed: Literal[42] = 42
 
 

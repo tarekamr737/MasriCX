@@ -48,3 +48,70 @@ def test_integrity_callback_stops_nonfinite_and_repeated_wer_degradation(tmp_pat
     callback.on_log(None, None, control, {"eval_wer": 0.2})
     with pytest.raises(RuntimeError, match="degraded"):
         callback.on_log(None, None, control, {"eval_wer": 0.3})
+
+
+def test_integrity_callback_writes_provenance_before_upload(tmp_path: Path) -> None:
+    plan = _plan(tmp_path)
+
+    class FakeTransformers:
+        class TrainerCallback:
+            pass
+
+    uploaded: list[Path] = []
+
+    class Store:
+        def upload_checkpoint(self, checkpoint: Path) -> None:
+            assert (checkpoint / "experiment_metadata.json").is_file()
+            assert (checkpoint / "training_config.json").is_file()
+            assert (checkpoint / "metrics.json").is_file()
+            uploaded.append(checkpoint)
+
+    callback = build_integrity_callback(FakeTransformers, plan, {}, Store())
+    control = SimpleNamespace()
+    args = SimpleNamespace(output_dir=tmp_path / "output")
+    state = SimpleNamespace(global_step=100, log_history=[{"loss": 1.0}])
+
+    callback.on_save(args, state, control)
+
+    assert uploaded == [tmp_path / "output" / "checkpoint-100"]
+
+
+def test_integrity_callback_stops_nonfinite_gradients_and_parameters(tmp_path: Path) -> None:
+    plan = _plan(tmp_path)
+
+    class FakeTransformers:
+        class TrainerCallback:
+            pass
+
+    class FiniteResult:
+        def __init__(self, finite: bool) -> None:
+            self.finite = finite
+
+        def all(self) -> FiniteResult:
+            return self
+
+        def item(self) -> bool:
+            return self.finite
+
+    class Tensor:
+        def __init__(self, finite: bool, grad: Tensor | None = None) -> None:
+            self.finite = finite
+            self.grad = grad
+            self.requires_grad = True
+
+        def detach(self) -> Tensor:
+            return self
+
+        def isfinite(self) -> FiniteResult:
+            return FiniteResult(self.finite)
+
+    callback = build_integrity_callback(FakeTransformers, plan, {})
+    control = SimpleNamespace()
+    bad_gradient = SimpleNamespace(
+        named_parameters=lambda: [("adapter", Tensor(True, Tensor(False)))]
+    )
+    with pytest.raises(RuntimeError, match="non-finite trainable gradient"):
+        callback.on_pre_optimizer_step(None, None, control, model=bad_gradient)
+    bad_parameter = SimpleNamespace(named_parameters=lambda: [("adapter", Tensor(False))])
+    with pytest.raises(RuntimeError, match="non-finite trainable parameter"):
+        callback.on_step_end(None, None, control, model=bad_parameter)

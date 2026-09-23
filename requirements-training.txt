@@ -4,6 +4,7 @@ PyYAML>=6.0
 pydantic>=2,<3
 transformers>=4.44,<6.0
 datasets>=2.20,<5.0
+huggingface-hub>=0.25,<2.0
 accelerate>=0.34,<2.0
 peft>=0.12,<0.19
 torch>=2.2,<3.0

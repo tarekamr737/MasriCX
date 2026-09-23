@@ -7,9 +7,9 @@ Governance (verified 2026-09-20 by the orchestrator from the live dataset card):
   ``MohamedRashad/arabic-english-code-switching`` whose revision/source is
   tagged GPL and built partly from YouTube plus a now-unavailable predecessor.
   The aggregate must therefore never be described as uniformly MIT.
-- Allowed Phase 1/2: audit and provisional internal research/training under
-  the published terms. No redistribution of raw or transformed data. Final
-  model publication/license claims remain blocked pending source-chain review.
+- No redistribution of raw or transformed data. The GPL-tagged source boundary
+  is verified at index 32,716, but filtering would remove most code-switched
+  examples; public model-weight licensing therefore requires an explicit decision.
 """
 
 from __future__ import annotations

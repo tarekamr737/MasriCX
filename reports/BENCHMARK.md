@@ -54,5 +54,6 @@ transcripts. Telephone robustness delta is `telephone WER - clean WER`.
 
 Training speech is not private call-center audio, telephone conditions are
 simulated, near-duplicate discovery is not exhaustive, and splits are not
-speaker-disjoint. E3 and final model publication remain blocked pending dataset
-license-provenance review.
+speaker-disjoint. E3 remains blocked pending its separate license-provenance
+review. Final model publication remains blocked until measured results satisfy
+the promotion gate and the primary-source model-weight licensing decision is resolved.

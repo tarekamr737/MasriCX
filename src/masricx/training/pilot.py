@@ -43,21 +43,37 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--split-dir", type=Path, default=Path("data/splits"))
     parser.add_argument("--resume-from", type=Path)
     parser.add_argument("--auto-resume", action="store_true")
+    parser.add_argument(
+        "--max-steps",
+        type=int,
+        help="Bound optimizer steps for an authorized numerical smoke run",
+    )
+    parser.add_argument(
+        "--checkpoint-repo",
+        help="Authorized private Hugging Face model repo in OWNER/NAME form",
+    )
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args(argv)
+    if args.max_steps is not None and args.max_steps <= 0:
+        raise SystemExit("--max-steps must be positive")
     plan = select_candidate(
         build_training_plan(args.config, args.output_dir, args.split_dir), args.config, args.run
     )
     resume = _resolve_resume(Path(plan.output_dir), args.resume_from, args.auto_resume)
     print(
         json.dumps(
-            {**plan.as_dict(), "resume_from": str(resume) if resume else None},
+            {
+                **plan.as_dict(),
+                "resume_from": str(resume) if resume else None,
+                "checkpoint_repo": args.checkpoint_repo,
+                "max_steps": args.max_steps,
+            },
             indent=2,
             sort_keys=True,
         )
     )
     if args.execute:
-        execute_training(plan, resume)
+        execute_training(plan, resume, args.checkpoint_repo, args.auto_resume, args.max_steps)
     return 0
 
 
